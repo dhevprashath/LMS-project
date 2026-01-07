@@ -1,0 +1,113 @@
+.pathways-page {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f7fafc;
+}
+
+.pathways-main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.pathway-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+}
+
+.pathway-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.pathway-info h2 {
+    margin: 0 0 0.5rem;
+    color: #2d3748;
+}
+
+.pathway-description {
+    color: #718096;
+    margin: 0;
+}
+
+.pathway-progress-container {
+    background-color: #edf2f7;
+    height: 10px;
+    border-radius: 5px;
+    width: 200px;
+    overflow: hidden;
+}
+
+.pathway-progress-bar {
+    height: 100%;
+    background-color: #48bb78;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+    border-left: 2px solid #e2e8f0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 2rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -2.6rem;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: 0 0 0 2px #cbd5e0;
+}
+
+.timeline-dot.completed {
+    background-color: #48bb78;
+    box-shadow: 0 0 0 2px #48bb78;
+}
+
+.timeline-dot.current {
+    background-color: #4299e1;
+    box-shadow: 0 0 0 2px #4299e1;
+}
+
+.timeline-dot.locked {
+    background-color: #cbd5e0;
+}
+
+.timeline-content {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.timeline-content h4 {
+    margin: 0 0 0.25rem;
+    color: #2d3748;
+}
+
+.timeline-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #a0aec0;
+}
+
+.timeline-dot.completed+.timeline-content .timeline-status {
+    color: #48bb78;
+}
+
+.timeline-dot.current+.timeline-content .timeline-status {
+    color: #4299e1;
+}

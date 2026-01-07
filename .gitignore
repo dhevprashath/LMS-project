@@ -1,0 +1,35 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+node_modules/
+
+# Frontend (Vite/React)
+frontend/dist/
+frontend/build/
+frontend/coverage/
+
+# Backend (Python/FastAPI)
+backend/venv/
+backend/env/
+backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+backend/debug_output.txt
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

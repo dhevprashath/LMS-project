@@ -1,0 +1,105 @@
+.attendance-page {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f7fafc;
+}
+
+.attendance-main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.attendance-header {
+    margin-bottom: 2rem;
+}
+
+.attendance-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.att-stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    flex: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.att-stat-card h3 {
+    margin: 0;
+    color: #718096;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.att-stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0.5rem 0;
+}
+
+.att-stat-label {
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
+.attendance-history {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.attendance-history h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #2d3748;
+    font-size: 1.25rem;
+}
+
+.att-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.att-table th {
+    text-align: left;
+    padding: 1rem;
+    background-color: #f7fafc;
+    color: #718096;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.att-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    color: #2d3748;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-badge.present {
+    background-color: #c6f6d5;
+    color: #2f855a;
+}
+
+.status-badge.absent {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.status-badge.late {
+    background-color: #feebc8;
+    color: #c05621;
+}

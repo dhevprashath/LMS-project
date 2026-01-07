@@ -1,0 +1,117 @@
+.certification-page {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f7fafc;
+}
+
+.certification-main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.certificates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.certificate-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s;
+    border: 1px solid #e2e8f0;
+}
+
+.certificate-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.cert-preview {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    border: 8px solid #4a5568;
+    padding: 2rem;
+    border-radius: 4px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.cert-preview::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(#cbd5e0 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.2;
+}
+
+.cert-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #ed8936;
+}
+
+.cert-title {
+    font-family: serif;
+    font-size: 1.5rem;
+    color: #2d3748;
+    margin: 0 0 0.5rem;
+}
+
+.cert-recipient {
+    font-style: italic;
+    color: #718096;
+    margin-bottom: 0.5rem;
+}
+
+.cert-date {
+    font-size: 0.85rem;
+    color: #a0aec0;
+}
+
+.cert-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.download-btn,
+.share-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+}
+
+.download-btn {
+    background-color: #4299e1;
+    color: white;
+}
+
+.download-btn:hover {
+    background-color: #3182ce;
+}
+
+.share-btn {
+    background-color: #f7fafc;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+}
+
+.share-btn:hover {
+    background-color: #edf2f7;
+}
