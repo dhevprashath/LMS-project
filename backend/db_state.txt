@@ -1,0 +1,10 @@
+--- DATABASE REPORT ---
+Total Users: 2
+User ID: 1 | Email: test@example.com | Name: Test User | Certificates: 3
+  - Cert: DEMO-F8E6A1C3 (Python Mastery)
+  - Cert: LMS-4248593F (Python for Beginners)
+  - Cert: LMS-A40E1469 (ReactJS Fundamentals)
+User ID: 2 | Email: dhevprashath@gmail.com | Name: dhevprashath | Certificates: 3
+  - Cert: FIX-A221EBBC (Python Mastery)
+  - Cert: LMS-DA78590C (Python for Beginners)
+  - Cert: LMS-C997FEE6 (ReactJS Fundamentals)

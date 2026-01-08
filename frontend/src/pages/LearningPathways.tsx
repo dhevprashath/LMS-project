@@ -1,147 +1,301 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    Send, Sparkles, User, Bot,
+    Download, Clock, Calendar, CheckCircle,
+    ArrowRight, Loader2, Layers
+} from 'lucide-react';
+import api from '../api/axios';
 
-import React from 'react';
-import { CheckCircle, Lock, Map, ChevronRight, Trophy, BookOpen } from 'lucide-react';
+interface ScheduleItem {
+    day: number;
+    phase: string;
+    topic: string;
+    activity: string;
+    hours: number;
+}
 
-const PathwaysData = [
-    {
-        id: 1,
-        title: "Frontend Developer Path",
-        description: "Master modern web development with React, TypeScript, and Tailwind CSS.",
-        progress: 60,
-        totalCourses: 5,
-        completedCourses: 3,
-        image: "https://images.unsplash.com/photo-1593720213428-28a5b9e94613?w=500&q=80",
-        steps: [
-            { id: 101, title: "HTML & CSS Fundamentals", status: "completed", duration: "2 weeks" },
-            { id: 102, title: "JavaScript Essentials", status: "completed", duration: "3 weeks" },
-            { id: 103, title: "React.js Deep Dive", status: "in-progress", duration: "4 weeks" },
-            { id: 104, title: "Advanced State Management", status: "locked", duration: "2 weeks" },
-            { id: 105, title: "Frontend System Design", status: "locked", duration: "3 weeks" },
-        ]
-    },
-    {
-        id: 2,
-        title: "Data Science Specialization",
-        description: "From Python basics to Machine Learning and AI applications.",
-        progress: 0,
-        totalCourses: 6,
-        completedCourses: 0,
-        image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&q=80",
-        steps: [
-            { id: 201, title: "Python for Data Science", status: "locked", duration: "3 weeks" },
-            { id: 202, title: "Data Analysis with Pandas", status: "locked", duration: "2 weeks" },
-            { id: 203, title: "Data Visualization", status: "locked", duration: "2 weeks" },
-            { id: 204, title: "Machine Learning Basics", status: "locked", duration: "4 weeks" },
-        ]
-    }
-];
+interface LearningPathData {
+    course_name: string;
+    total_days: number;
+    hours_per_day: number;
+    total_hours: number;
+    schedule: ScheduleItem[];
+}
+
+interface Message {
+    id: number;
+    role: 'user' | 'bot';
+    text: string;
+    type?: 'text' | 'result';
+    data?: LearningPathData;
+}
 
 const LearningPathways: React.FC = () => {
+    const [messages, setMessages] = useState<Message[]>([
+        { id: 1, role: 'bot', text: "Hi! I'm your Learning Path AI. What skill or topic do you want to learn today?", type: 'text' }
+    ]);
+    const [input, setInput] = useState('');
+    const [step, setStep] = useState(0); // 0: Topic, 1: Days, 2: Hours, 3: Done
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        course_name: '',
+        days: 0,
+        hours_per_day: 0
+    });
+
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleSend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim()) return;
+
+        const userMsg: Message = { id: Date.now(), role: 'user', text: input, type: 'text' };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+
+        // Simulate thinking delay
+        setTimeout(async () => {
+            processStep(input, userMsg.id + 1);
+        }, 600);
+    };
+
+    const processStep = async (userInput: string, msgId: number) => {
+        let nextStep = step;
+        let botText = '';
+        let resultData: LearningPathData | undefined;
+        let msgType: 'text' | 'result' = 'text';
+
+        try {
+            if (step === 0) {
+                // Topic received
+                setFormData(prev => ({ ...prev, course_name: userInput }));
+                botText = `Great choice! Mastering ${userInput} sounds exciting. How many days can you dedicate to this learning journey?`;
+                nextStep = 1;
+            } else if (step === 1) {
+                // Days received
+                const days = parseInt(userInput);
+                if (isNaN(days) || days <= 0) {
+                    botText = "Please enter a valid number of days (e.g., 30).";
+                    setLoading(false);
+                    setMessages(prev => [...prev, { id: msgId, role: 'bot', text: botText }]);
+                    return; // Don't advance step
+                }
+                setFormData(prev => ({ ...prev, days }));
+                botText = `Got it, ${days} days. And how many hours per day are you planning to study?`;
+                nextStep = 2;
+            } else if (step === 2) {
+                // Hours received
+                const hours = parseInt(userInput);
+                if (isNaN(hours) || hours <= 0) {
+                    botText = "Please enter a valid number of hours (e.g., 2).";
+                    setLoading(false);
+                    setMessages(prev => [...prev, { id: msgId, role: 'bot', text: botText }]);
+                    return; // Don't advance step
+                }
+
+                // Finalize data and generate
+                const finalData = { ...formData, hours_per_day: hours };
+                setFormData(finalData);
+
+                // Call API
+                botText = "Perfect! I'm generating your personalized learning roadmap now...";
+                setMessages(prev => [...prev, { id: msgId, role: 'bot', text: botText }]);
+
+                try {
+                    const res = await api.post('/learning-path/generate', finalData);
+                    resultData = res.data;
+                    msgType = 'result';
+                    botText = `Here is your custom roadmap for ${finalData.course_name}! You can download it as a PDF below.`;
+
+                    // Add result message after the "Generating..." message
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, {
+                            id: msgId + 1,
+                            role: 'bot',
+                            text: botText,
+                            type: 'result',
+                            data: resultData
+                        }]);
+                    }, 1000);
+
+                } catch (err) {
+                    console.error("API Error", err);
+                    botText = "I'm sorry, I encountered an issue generating your legacy. Please try again.";
+                }
+                nextStep = 3; // Done
+            } else if (step === 3) {
+                // Reset
+                botText = "I can generate another path for you. What new topic would you like to learn?";
+                nextStep = 0;
+                setFormData({ course_name: '', days: 0, hours_per_day: 0 });
+                setFormData(prev => ({ ...prev, course_name: userInput })); // Treat input as new topic? 
+                // Actually better to just reset flow
+                botText = `Okay! Let's start a new path for ${userInput}. How many days?`;
+                setFormData({ course_name: userInput, days: 0, hours_per_day: 0 });
+                nextStep = 1;
+            }
+
+            if (msgType === 'text' && step !== 2) {
+                // Don't add text message if we are in the "Generating..." async block handled separately
+                setMessages(prev => [...prev, { id: msgId, role: 'bot', text: botText }]);
+            }
+
+            setStep(nextStep);
+        } catch (error) {
+            console.error(error);
+            setMessages(prev => [...prev, { id: msgId, role: 'bot', text: "Something went wrong. Let's start over." }]);
+            setStep(0);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDownloadPDF = async (data: LearningPathData) => {
+        try {
+            const res = await api.post('/learning-path/download', {
+                course_name: data.course_name,
+                days: data.total_days,
+                hours_per_day: data.hours_per_day
+            }, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${data.course_name.replace(/\s+/g, '_')}_Roadmap.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (err) {
+            console.error("Failed to download PDF", err);
+        }
+    };
+
     return (
-        <div className="space-y-12 animate-in fade-in duration-500">
+        <div className="h-[calc(100vh-6rem)] flex flex-col bg-gray-50/50 rounded-3xl border border-gray-100 overflow-hidden">
             {/* Header */}
-            <div>
-                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Learning Pathways</h2>
-                <p className="text-gray-500 mt-1">Structured roadmaps to master new skills</p>
+            <div className="bg-white p-4 border-b border-gray-100 flex items-center gap-3 shadow-sm z-10">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shadow-md">
+                    <Sparkles size={20} />
+                </div>
+                <div>
+                    <h1 className="font-bold text-gray-900">Pathfinder AI</h1>
+                    <p className="text-xs text-green-500 flex items-center gap-1 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Online
+                    </p>
+                </div>
             </div>
 
-            {PathwaysData.map((path) => (
-                <div key={path.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="md:flex">
-                        {/* Pathway Info */}
-                        <div className="md:w-1/3 bg-gray-50 p-8 flex flex-col justify-between border-r border-gray-100">
-                            <div>
-                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6 text-indigo-600">
-                                    <Map size={32} />
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">{path.title}</h3>
-                                <p className="text-gray-500 mb-6">{path.description}</p>
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                {messages.map((msg) => (
+                    <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {msg.role === 'bot' && (
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 mt-2">
+                                <Bot size={18} />
+                            </div>
+                        )}
 
-                                <div className="space-y-4">
-                                    <div className="flex justify-between text-sm font-medium">
-                                        <span className="text-gray-600">{path.completedCourses}/{path.totalCourses} Courses</span>
-                                        <span className="text-indigo-600">{path.progress}% Completed</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                        <div
-                                            className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                                            style={{ width: `${path.progress}%` }}
-                                        />
-                                    </div>
-                                </div>
+                        <div className={`max-w-[85%] sm:max-w-[70%] space-y-2`}>
+                            <div className={`p-4 rounded-2xl shadow-sm ${msg.role === 'user'
+                                    ? 'bg-indigo-600 text-white rounded-br-none'
+                                    : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none'
+                                }`}>
+                                <p className="leading-relaxed">{msg.text}</p>
                             </div>
 
-                            {path.progress === 0 && (
-                                <button className="mt-8 w-full py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
-                                    Start Learning Path
-                                </button>
-                            )}
-                            {path.progress > 0 && path.progress < 100 && (
-                                <button className="mt-8 w-full py-3 bg-white border-2 border-indigo-600 text-indigo-600 rounded-xl font-medium hover:bg-indigo-50 transition-colors">
-                                    Continue Learning
-                                </button>
+                            {/* Result Card */}
+                            {msg.type === 'result' && msg.data && (
+                                <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden mt-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{msg.data.course_name} Roadmap</h3>
+                                            <p className="text-xs text-gray-500">{msg.data.total_days} Days • {msg.data.total_hours} Hours Total</p>
+                                        </div>
+                                        <button
+                                            onClick={() => msg.data && handleDownloadPDF(msg.data)}
+                                            className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-sm font-bold flex items-center gap-2"
+                                        >
+                                            <Download size={16} /> PDF
+                                        </button>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto p-2 scrollbar-thin">
+                                        {msg.data.schedule.slice(0, 5).map((item, idx) => (
+                                            <div key={idx} className="flex gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                                                <div className="w-8 font-bold text-gray-400 text-sm text-center pt-1">D{item.day}</div>
+                                                <div className="flex-1">
+                                                    <h4 className="font-semibold text-gray-800 text-sm">{item.topic}</h4>
+                                                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.activity}</p>
+                                                </div>
+                                                <div className="text-xs font-medium px-2 py-1 bg-gray-100 rounded-md h-fit text-gray-600 w-fit whitespace-nowrap">
+                                                    {item.hours}h
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {msg.data.schedule.length > 5 && (
+                                            <div className="p-2 text-center text-xs text-gray-400 italic">
+                                                + {msg.data.schedule.length - 5} more days in PDF...
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </div>
 
-                        {/* Timeline */}
-                        <div className="md:w-2/3 p-8">
-                            <h4 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                                <BookOpen size={20} className="text-gray-400" />
-                                Curriculum
-                            </h4>
-                            <div className="relative space-y-8 pl-4">
-                                {/* Vertical Line */}
-                                <div className="absolute left-8 top-2 bottom-2 w-0.5 bg-gray-100 -z-10"></div>
-
-                                {path.steps.map((step) => (
-                                    <div key={step.id} className="relative flex items-center gap-6 group">
-                                        {/* Icon/Status */}
-                                        <div className={`
-                                            w-8 h-8 rounded-full flex items-center justify-center border-4 z-10 transition-colors duration-300
-                                            ${step.status === 'completed' ? 'bg-green-500 border-green-100 text-white' :
-                                                step.status === 'in-progress' ? 'bg-white border-indigo-100 text-indigo-600 shadow-sm' :
-                                                    'bg-gray-100 border-gray-50 text-gray-400'}
-                                        `}>
-                                            {step.status === 'completed' && <CheckCircle size={16} />}
-                                            {step.status === 'in-progress' && <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse" />}
-                                            {step.status === 'locked' && <Lock size={14} />}
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className={`
-                                            flex-1 p-4 rounded-xl border transition-all duration-300
-                                            ${step.status === 'in-progress' ? 'bg-indigo-50 border-indigo-100 shadow-sm' :
-                                                step.status === 'locked' ? 'bg-white border-transparent opacity-60' :
-                                                    'bg-white border-gray-100'}
-                                        `}>
-                                            <div className="flex justify-between items-center">
-                                                <h5 className={`font-semibold ${step.status === 'locked' ? 'text-gray-500' : 'text-gray-900'}`}>{step.title}</h5>
-                                                {step.status !== 'locked' && (
-                                                    <span className="text-xs font-medium bg-white px-2 py-1 rounded-md text-gray-500 border border-gray-100">
-                                                        {step.duration}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {step.status === 'in-progress' && (
-                                                <div className="mt-2 flex items-center gap-2 text-sm text-indigo-600 font-medium">
-                                                    Resume Course <ChevronRight size={16} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <div className="flex items-center gap-6 opacity-30">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 border-4 border-gray-50 flex items-center justify-center text-gray-400">
-                                        <Trophy size={14} />
-                                    </div>
-                                    <div className="text-sm font-medium text-gray-400">Path Completion Certificate</div>
-                                </div>
+                        {msg.role === 'user' && (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 shrink-0 mt-2">
+                                <User size={18} />
                             </div>
+                        )}
+                    </div>
+                ))}
+
+                {loading && (
+                    <div className="flex gap-4">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <Bot size={18} />
+                        </div>
+                        <div className="bg-white border border-gray-100 p-4 rounded-2xl rounded-bl-none shadow-sm flex items-center gap-2">
+                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                            <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                         </div>
                     </div>
-                </div>
-            ))}
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 bg-white border-t border-gray-100">
+                <form onSubmit={handleSend} className="relative max-w-4xl mx-auto flex gap-3">
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Type your answer here..."
+                        className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent block w-full p-4 pl-5 outline-none transition-all shadow-inner"
+                        disabled={loading}
+                        autoFocus
+                    />
+                    <button
+                        type="submit"
+                        disabled={loading || !input.trim()}
+                        className="p-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95"
+                    >
+                        {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 };

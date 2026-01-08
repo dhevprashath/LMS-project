@@ -1,27 +1,25 @@
-import motor.motor_asyncio
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_DETAILS = os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017")
+# Use SQLite
+SQLALCHEMY_DATABASE_URL = "sqlite:///./lms.db"
 
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 
-database = client.lms_db
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-user_collection = database.get_collection("users")
-course_collection = database.get_collection("courses")
-enrollment_collection = database.get_collection("enrollments")
-student_collection = database.get_collection("students")
+Base = declarative_base()
 
-# Helper to fix ObjectId serialization if needed
-def student_helper(student) -> dict:
-    return {
-        "id": str(student["_id"]),
-        "fullname": student["fullname"],
-        "email": student["email"],
-        "course_of_study": student["course_of_study"],
-        "year": student["year"],
-        "GPA": student["GPA"],
-    }
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

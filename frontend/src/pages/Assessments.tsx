@@ -1,181 +1,213 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, CheckCircle, AlertCircle, FileText, ChevronRight } from 'lucide-react';
+import { Sparkles, Loader2, ArrowLeft } from 'lucide-react';
+import api from '../api/axios';
+
+interface QuizQuestion {
+    question: string;
+    option_a: string;
+    option_b: string;
+    option_c: string;
+    option_d: string;
+    correct_option: string;
+}
 
 const Assessments: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
 
-    const upcomingAssessments = [
-        {
-            id: 1,
-            title: "React Components Quiz",
-            course: "Introduction to React",
-            dueDate: "Tomorrow, 11:59 PM",
-            duration: "45 mins",
-            questions: 20,
-            type: "Quiz",
-            urgent: true
-        },
-        {
-            id: 2,
-            title: "Data Structures Midterm",
-            course: "Advanced Python",
-            dueDate: "Oct 30, 2024",
-            duration: "90 mins",
-            questions: 35,
-            type: "Exam",
-            urgent: false
-        },
-        {
-            id: 3,
-            title: "UI Design Principles",
-            course: "UI/UX Design Masterclass",
-            dueDate: "Nov 05, 2024",
-            duration: "30 mins",
-            questions: 15,
-            type: "Quiz",
-            urgent: false
-        }
-    ];
+    // Quiz Generator State
+    const [topic, setTopic] = useState('');
+    const [generating, setGenerating] = useState(false);
+    const [quizMode, setQuizMode] = useState<'list' | 'taking' | 'result'>('list');
+    const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+    const [answers, setAnswers] = useState<{ [key: number]: string }>({});
+    const [score, setScore] = useState(0);
 
-    const completedAssessments = [
-        {
-            id: 101,
-            title: "HTML/CSS Basics",
-            course: "Frontend Fundamentals",
-            submittedDate: "Oct 15, 2024",
-            score: 95,
-            grade: "A",
-            status: "Passed"
-        },
-        {
-            id: 102,
-            title: "JavaScript Logic",
-            course: "JavaScript Essentials",
-            submittedDate: "Oct 10, 2024",
-            score: 88,
-            grade: "B+",
-            status: "Passed"
+    const handleGenerateQuiz = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!topic.trim()) return;
+
+        setGenerating(true);
+        try {
+            const res = await api.post('/assessments/generate', { topic });
+            setQuizQuestions(res.data);
+            setQuizMode('taking');
+            setAnswers({}); // Reset answers
+        } catch (err) {
+            console.error("Failed to generate quiz", err);
+            alert("Could not generate quiz. Please try again.");
+        } finally {
+            setGenerating(false);
         }
-    ];
+    };
+
+    const handleOptionSelect = (qIdx: number, option: string) => {
+        setAnswers(prev => ({ ...prev, [qIdx]: option }));
+    };
+
+    const handleSubmitQuiz = () => {
+        let correctCount = 0;
+        quizQuestions.forEach((q, idx) => {
+            if (answers[idx] === q.correct_option) {
+                correctCount++;
+            }
+        });
+        setScore(correctCount);
+        setQuizMode('result');
+    };
+
+    const resetQuiz = () => {
+        setQuizMode('list');
+        setTopic('');
+        setQuizQuestions([]);
+        setAnswers({});
+        setScore(0);
+    };
+
+    if (quizMode === 'taking' || quizMode === 'result') {
+        return (
+            <div className="max-w-3xl mx-auto animate-in fade-in duration-500">
+                <button
+                    onClick={resetQuiz}
+                    className="mb-6 flex items-center text-gray-500 hover:text-gray-900 font-medium transition-colors"
+                >
+                    <ArrowLeft size={18} className="mr-1" /> Back to Assessments
+                </button>
+
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 capitalize">{topic} Practice Quiz</h2>
+                        <p className="text-gray-500">{quizQuestions.length} Questions • AI Generated</p>
+                    </div>
+
+                    {quizMode === 'result' && (
+                        <div className={`mb-8 p-6 rounded-2xl text-center ${score >= 3 ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                            <p className="text-lg font-bold mb-2">Quiz Completed!</p>
+                            <p className="text-3xl font-black">{score} / {quizQuestions.length}</p>
+                            <p className="text-sm mt-2 opacity-80">
+                                {score >= 3 ? "Great job! You've mastered the basics." : "Keep practicing! You'll get there."}
+                            </p>
+                            <button
+                                onClick={resetQuiz}
+                                className="mt-4 px-6 py-2 bg-white rounded-xl shadow-sm font-bold text-sm hover:scale-105 transition-transform"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="space-y-8">
+                        {quizQuestions.map((q, idx) => (
+                            <div key={idx} className="space-y-3">
+                                <p className="font-bold text-gray-800 text-lg">
+                                    <span className="text-gray-400 mr-2">{idx + 1}.</span>
+                                    {q.question}
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {['a', 'b', 'c', 'd'].map((optKey) => {
+                                        const optionText = (q as any)[`option_${optKey}`];
+                                        const isSelected = answers[idx] === optKey;
+                                        const isCorrect = q.correct_option === optKey;
+
+                                        let btnClass = "border-gray-200 hover:border-indigo-300 hover:bg-gray-50";
+
+                                        if (quizMode === 'result') {
+                                            if (isCorrect) btnClass = "border-green-500 bg-green-50 text-green-700 ring-1 ring-green-500";
+                                            else if (isSelected && !isCorrect) btnClass = "border-red-300 bg-red-50 text-red-700";
+                                            else btnClass = "border-gray-200 opacity-50";
+                                        } else {
+                                            if (isSelected) btnClass = "border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600";
+                                        }
+
+                                        return (
+                                            <button
+                                                key={optKey}
+                                                disabled={quizMode === 'result'}
+                                                onClick={() => handleOptionSelect(idx, optKey)}
+                                                className={`p-4 rounded-xl border-2 text-left transition-all font-medium ${btnClass}`}
+                                            >
+                                                {optionText}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {quizMode === 'taking' && (
+                        <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={handleSubmitQuiz}
+                                disabled={Object.keys(answers).length < quizQuestions.length}
+                                className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-200"
+                            >
+                                Submit Quiz
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
-            <div>
-                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Assessments</h2>
-                <p className="text-gray-500 mt-1">Track your quizzes, exams, and assignments</p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Assessments</h2>
+                    <p className="text-gray-500 mt-1">Track your quizzes, exams, and assignments</p>
+                </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-4 border-b border-gray-200">
-                <button
-                    className={`pb-4 px-2 text-sm font-medium transition-colors relative ${activeTab === 'upcoming' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    onClick={() => setActiveTab('upcoming')}
-                >
-                    Upcoming
-                    {activeTab === 'upcoming' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full"></div>
-                    )}
-                </button>
-                <button
-                    className={`pb-4 px-2 text-sm font-medium transition-colors relative ${activeTab === 'completed' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    onClick={() => setActiveTab('completed')}
-                >
-                    Completed
-                    {activeTab === 'completed' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full"></div>
-                    )}
-                </button>
-            </div>
+            {/* AI Generator Card */}
+            <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl">
+                <div className="absolute top-0 right-0 p-32 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-indigo-100 text-xs font-bold uppercase tracking-wider mb-4 border border-white/20">
+                            <Sparkles size={14} className="text-yellow-300" /> New Feature
+                        </div>
+                        <h3 className="text-2xl font-bold mb-2">AI Quiz Generator</h3>
+                        <p className="text-indigo-200 mb-6 max-w-md">
+                            Instantly generate a practice quiz for any subject. Test your knowledge and get immediate feedback.
+                        </p>
 
-            {/* Content */}
-            <div className="space-y-4">
-                {activeTab === 'upcoming' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {upcomingAssessments.map(assessment => (
-                            <div key={assessment.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className={`p-2 rounded-lg ${assessment.type === 'Exam' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                                        <FileText size={20} />
-                                    </div>
-                                    {assessment.urgent && (
-                                        <div className="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full">
-                                            <AlertCircle size={12} /> Expiry Soon
-                                        </div>
-                                    )}
-                                </div>
-
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">{assessment.title}</h3>
-                                <p className="text-sm text-gray-500 mb-4">{assessment.course}</p>
-
-                                <div className="space-y-3 mb-6">
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <Calendar size={16} className="text-gray-400" />
-                                        <span>Due: {assessment.dueDate}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <Clock size={16} className="text-gray-400" />
-                                        <span>{assessment.duration} • {assessment.questions} Questions</span>
-                                    </div>
-                                </div>
-
-                                <button className="mt-auto w-full py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200">
-                                    Start Assessment
-                                </button>
-                            </div>
-                        ))}
+                        <form onSubmit={handleGenerateQuiz} className="flex gap-2 max-w-md">
+                            <input
+                                type="text"
+                                placeholder="E.g. Python, React, History..."
+                                className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-indigo-400/30 text-white placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-sm transition-all"
+                                value={topic}
+                                onChange={(e) => setTopic(e.target.value)}
+                            />
+                            <button
+                                type="submit"
+                                disabled={generating || !topic}
+                                className="px-6 py-3 bg-white text-indigo-900 rounded-xl font-bold hover:bg-indigo-50 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {generating ? <Loader2 className="animate-spin" /> : <Sparkles size={18} />}
+                                Generate
+                            </button>
+                        </form>
                     </div>
-                )}
-
-                {activeTab === 'completed' && (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-semibold">
-                                    <tr>
-                                        <th className="px-6 py-4">Assessment Name</th>
-                                        <th className="px-6 py-4">Submitted Date</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Grade</th>
-                                        <th className="px-6 py-4 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {completedAssessments.map(assessment => (
-                                        <tr key={assessment.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div>
-                                                    <p className="font-semibold text-gray-900">{assessment.title}</p>
-                                                    <p className="text-xs text-gray-500">{assessment.course}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">{assessment.submittedDate}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                    <CheckCircle size={12} /> {assessment.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-lg font-bold text-gray-900">{assessment.grade}</span>
-                                                    <span className="text-xs text-gray-500">({assessment.score}%)</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button className="text-indigo-600 hover:text-indigo-800 font-medium text-sm inline-flex items-center gap-1">
-                                                    Review <ChevronRight size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="hidden lg:block relative h-full min-h-[160px]">
+                        {/* Decorative elements representing quiz/learning */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xs aspect-video bg-white/10 backdrop-blur-md rounded-xl border border-white/10 p-4 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                            <div className="space-y-3 opacity-60">
+                                <div className="h-2 bg-white/40 rounded w-3/4"></div>
+                                <div className="h-2 bg-white/20 rounded w-1/2"></div>
+                                <div className="h-2 bg-white/20 rounded w-5/6"></div>
+                            </div>
+                            <div className="mt-4 flex gap-2">
+                                <div className="h-8 w-8 rounded-full bg-green-400/80"></div>
+                                <div className="h-8 w-8 rounded-full bg-white/20"></div>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
+
+
         </div>
     );
 };

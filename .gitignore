@@ -6,30 +6,38 @@ Thumbs.db
 # Environment Variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
-# Dependencies
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/lms.db
+
+# Node / Frontend
 node_modules/
+dist/
+build/
+coverage/
+.next/
 
-# Frontend (Vite/React)
-frontend/dist/
-frontend/build/
-frontend/coverage/
-
-# Backend (Python/FastAPI)
-backend/venv/
-backend/env/
-backend/__pycache__/
+# Python / Backend
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache/
-backend/debug_output.txt
+venv/
+.venv/
+env/
+.Python
+*.egg-info/
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+
+
