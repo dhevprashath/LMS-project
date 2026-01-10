@@ -4,58 +4,56 @@ from datetime import datetime
 
 def seed_direct():
     print("Connecting to database...")
-    conn = sqlite3.connect('lms.db')
+    # Fix: Connect to lms.db in the same folder as this script
+    import os
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(BASE_DIR, 'lms.db')
+    print(f"DB Path: {db_path}")
+    
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Check users
-    cursor.execute("SELECT id, email, fullname FROM users")
-    users = cursor.fetchall()
-    print(f"Found {len(users)} users.")
-    for u in users:
-        print(f" - User: {u[0]} {u[1]}")
+    # 1. Ensure Courses Exist
+    courses = [
+        ("Python Mastery", "Complete Python Course", "Beginner", 120),
+        ("Java Programming", "Complete Java Course", "Intermediate", 150)
+    ]
+    
+    db_courses = {} # title -> id
 
-    # Check courses
-    cursor.execute("SELECT id, title FROM courses")
-    courses = cursor.fetchall()
-    print(f"Found {len(courses)} courses.")
-    
-    if not courses:
-        print("No courses found! creating a dummy course...")
-        cursor.execute("INSERT INTO courses (title, description, level, total_duration, created_at) VALUES (?, ?, ?, ?, ?)", 
-                       ("Python Mastery", "Complete Python Course", "Beginner", 120, datetime.now()))
-        conn.commit()
-        courses = [(cursor.lastrowid, "Python Mastery")]
-
-    # Issue certificates for User ID 4 (and others) if they don't have one
-    target_user_id = 4
-    
-    # Check if user 4 exists in the list we fetched
-    user_exists = any(u[0] == target_user_id for u in users)
-    if not user_exists: 
-        print(f"User {target_user_id} not found in DB. Fallback to issuing for all users.")
-    
-    users_to_process = [u for u in users if u[0] == target_user_id] if user_exists else users
-    
-    for user in users_to_process:
-        uid = user[0]
-        # Pick first course
-        course_id = courses[0][0]
-        course_title = courses[0][1]
-        
-        # Check existing
-        cursor.execute("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?", (uid, course_id))
-        if cursor.fetchone():
-            print(f"User {uid} already has certificate for {course_title}")
-            continue
+    for title, desc, level, duration in courses:
+        cursor.execute("SELECT id FROM courses WHERE title = ?", (title,))
+        row = cursor.fetchone()
+        if not row:
+            print(f"Creating course: {title}")
+            cursor.execute("INSERT INTO courses (title, description, level, total_duration, created_at) VALUES (?, ?, ?, ?, ?)", 
+                           (title, desc, level, duration, datetime.now()))
+            db_courses[title] = cursor.lastrowid
+        else:
+            db_courses[title] = row[0]
             
-        code = f"LMS-{str(uuid.uuid4()).split('-')[0].upper()}"
-        now = datetime.now()
-        
-        cursor.execute("""
-            INSERT INTO certificates (user_id, course_id, certificate_code, issued_date)
-            VALUES (?, ?, ?, ?)
-        """, (uid, course_id, code, now))
-        print(f"Issued certificate {code} to User {uid} for {course_title}")
+    conn.commit()
+
+    # 2. Get All Users
+    cursor.execute("SELECT id, email FROM users")
+    users = cursor.fetchall()
+    print(f"Found {len(users)} users. Issuing certificates...")
+
+    # 3. Issue Certificates
+    for u in users:
+        user_id = u[0]
+        for title, course_id in db_courses.items():
+            # Check if exists
+            cursor.execute("SELECT id FROM certificates WHERE user_id = ? AND course_id = ?", (user_id, course_id))
+            if cursor.fetchone():
+                continue
+            
+            code = f"LMS-{str(uuid.uuid4()).split('-')[0].upper()}"
+            cursor.execute("""
+                INSERT INTO certificates (user_id, course_id, certificate_code, issued_date)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, course_id, code, datetime.now()))
+            print(f"Issued '{title}' certificate to User {user_id}")
 
     conn.commit()
     conn.close()

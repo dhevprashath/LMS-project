@@ -4,14 +4,17 @@ from sqlalchemy.orm import Session
 from database import engine, Base, get_db
 import models
 from models import User
-from auth_routes import get_password_hash
-import auth_routes, course_routes, attendance_routes, assessment_routes, certificate_routes
+from passlib.context import CryptContext
+from controllers import auth_controller, course_controller, certificate_controller
+import attendance_routes, assessment_routes
 import uvicorn
-# Trigger reload 2
 
 # Create Tables
-# Create Tables
 Base.metadata.create_all(bind=engine)
+
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 # Seed Dummy Data
 def seed_data():
@@ -20,8 +23,8 @@ def seed_data():
         print("Seeding dummy user...")
         hashed_password = get_password_hash("password123")
         dummy_user = models.User(
-            email="test@example.com",
-            password=hashed_password,
+            email="test@example.com", 
+            password=hashed_password, 
             fullname="Test User"
         )
         db.add(dummy_user)
@@ -49,11 +52,11 @@ app.add_middleware(
 async def root():
     return {"message": "Welcome to the LMS API (MySQL Version)"}
 
-app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
-app.include_router(course_routes.router, prefix="/courses", tags=["Courses"])
+app.include_router(auth_controller.router, prefix="/auth", tags=["Authentication"])
+app.include_router(course_controller.router, prefix="/courses", tags=["Courses"])
 app.include_router(attendance_routes.router, prefix="/attendance", tags=["Attendance"])
 app.include_router(assessment_routes.router, prefix="/assessments", tags=["Assessments"])
-app.include_router(certificate_routes.router, prefix="/certificates", tags=["Certificates"])
+app.include_router(certificate_controller.router, prefix="/certificates", tags=["Certificates"])
 
 from routers import learning_path
 app.include_router(learning_path.router)
@@ -73,9 +76,6 @@ def get_dashboard_stats(user_id: int, db: Session = Depends(get_db)):
     
     attendance_percentage = int((present_attendance / total_attendance * 100)) if total_attendance > 0 else 0
     
-    # Check if Certificate model has user_id, usually it does. 
-    # If using schemas.py reference, it likely does. 
-    # Checking models.py would be safer but let's assume standard pattern.
     certificates_earned = db.query(models.Certificate).filter(models.Certificate.user_id == user_id).count()
     
     return {
@@ -84,10 +84,6 @@ def get_dashboard_stats(user_id: int, db: Session = Depends(get_db)):
         "attendance_percentage": attendance_percentage,
         "certificates_earned": certificates_earned
     }
-
-
-
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

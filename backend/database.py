@@ -6,8 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use SQLite
-SQLALCHEMY_DATABASE_URL = "sqlite:///./lms.db"
+# Use SQLite - Absolute Path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'lms.db')}"
+print(f"--- DATABASE DEBUG ---")
+print(f"BASE_DIR: {BASE_DIR}")
+print(f"DB Path: {os.path.join(BASE_DIR, 'lms.db')}")
+print(f"Exists? {os.path.exists(os.path.join(BASE_DIR, 'lms.db'))}")
+print(f"----------------------")
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
